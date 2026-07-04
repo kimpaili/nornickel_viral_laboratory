@@ -1,0 +1,25 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*.sqlite
+*.db
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.idea/
+dist/
+build/
+data/raw/
+data/processed/
+
+# Данные задачи: крупные PDF-учебники (один > лимита GitHub 100 МБ) + приватные xlsx/docx
+Задача 1/
+Задача*/
+
+# Временное и локальное окружение
+scratchpad/
+.claude/
+.agents/
+*.egg-info/
+.DS_Store

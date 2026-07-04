@@ -1,0 +1,103 @@
+x-app-env: &app-env
+  DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/factory_hypotheses
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+  OPENROUTER_MODEL: ${OPENROUTER_MODEL:-~openai/gpt-latest}
+  OPENROUTER_APP_TITLE: ${OPENROUTER_APP_TITLE:-Factory of Hypotheses MVP}
+  OPENROUTER_APP_URL: ${OPENROUTER_APP_URL:-http://localhost:8000}
+  # Ollama крутится на хосте — из контейнера доступен через host-gateway.
+  # Захардкожено (не ${...}): корневой .env содержит localhost для запуска на хосте,
+  # и compose иначе подставил бы его сюда, сломав доступ из контейнера.
+  OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+  OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-granite-embedding:278m}
+  OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-qwen2.5:3b}
+  OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-180}
+  EMBED_DIM: ${EMBED_DIM:-768}
+  CORPUS_PATH: /corpus
+  RAG_TOP_K: ${RAG_TOP_K:-6}
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: factory_hypotheses
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d factory_hypotheses"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    environment: *app-env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - "./Задача 1:/corpus:ro"
+      - "./backend:/app/backend"
+    command: ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: .
+    environment:
+      API_BASE: http://api:8000
+    command:
+      - "streamlit"
+      - "run"
+      - "frontend/app.py"
+      - "--server.address=0.0.0.0"
+      - "--server.port=8501"
+      - "--theme.base=dark"
+      - "--theme.primaryColor=#2fce8f"
+      - "--theme.backgroundColor=#0f1419"
+      - "--theme.secondaryBackgroundColor=#1a2029"
+      - "--theme.textColor=#e8eef2"
+    volumes:
+      - "./frontend:/app/frontend"
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+
+  seed:
+    build: .
+    environment: *app-env
+    volumes:
+      - "./backend:/app/backend"
+      - "./db:/app/db"
+    command: ["python", "-m", "db.seed"]
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - tools
+
+  corpus-index:
+    build: .
+    environment: *app-env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - "./Задача 1:/corpus:ro"
+      - "./backend:/app/backend"
+      - "./db:/app/db"
+    command: ["python", "-m", "backend.rag.cli", "/corpus"]
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:

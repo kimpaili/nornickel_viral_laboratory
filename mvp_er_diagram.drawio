@@ -1,0 +1,88 @@
+<mxfile host="app.diagrams.net" version="24.0.0">
+  <diagram id="er_mvp" name="ER MVP Фабрика гипотез">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ==== СПРАВОЧНИКИ ==== -->
+        <mxCell id="metal" value="metal&#10;──────────&#10;PK id&#10;code (Ni/Cu)&#10;title&#10;price_usd_t" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="size_class" value="size_class&#10;──────────&#10;PK id&#10;code (-71+45)&#10;microns_lo/hi&#10;sort_order" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="170" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="mineral_form" value="mineral_form&#10;──────────&#10;PK id&#10;code&#10;title&#10;loss_cause (free/locked/dispersed)&#10;recoverable" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="200" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ==== ФАБРИКА ==== -->
+        <mxCell id="plant" value="plant&#10;──────────&#10;PK id&#10;code&#10;title&#10;feed_smt&#10;tailings_smt" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="340" y="40" width="180" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="equipment" value="equipment&#10;──────────&#10;PK id&#10;FK plant_id&#10;kind&#10;model&#10;qty" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="340" y="200" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ==== ДИАГНОЗ ==== -->
+        <mxCell id="loss_cell" value="loss_cell  (МАТРИЦА ПОТЕРЬ)&#10;──────────&#10;PK id&#10;FK plant_id&#10;FK metal_id&#10;FK size_class_id&#10;FK mineral_form_id&#10;tons" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="340" y="360" width="220" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- ==== ДВИЖОК ==== -->
+        <mxCell id="module" value="module&#10;──────────&#10;PK id&#10;code&#10;title&#10;description" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="660" y="40" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="rule" value="rule&#10;──────────&#10;PK id&#10;FK module_id&#10;target_cause&#10;FK target_size_class_id&#10;coeff / min / max&#10;side_effect&#10;requires_kind&#10;source" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="170" width="200" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- ==== ГИПОТЕЗЫ ==== -->
+        <mxCell id="hypothesis" value="hypothesis&#10;──────────&#10;PK id&#10;FK plant_id&#10;FK module_id&#10;title&#10;origin (expert/generated)&#10;status" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="960" y="40" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="evaluation" value="evaluation&#10;──────────&#10;PK id&#10;FK hypothesis_id&#10;FK rule_id&#10;FK target_metal_id&#10;effect_tons_min/max&#10;effect_usd_min/max&#10;feasible&#10;relevance_score / rank&#10;provenance (JSONB)&#10;dead_end_flag" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="960" y="200" width="220" height="180" as="geometry" />
+        </mxCell>
+
+        <!-- ==== ДОРОЖНАЯ КАРТА ==== -->
+        <mxCell id="roadmap_step" value="roadmap_step&#10;──────────&#10;PK id&#10;FK hypothesis_id&#10;step_order&#10;title&#10;shared_key (сращивание)&#10;cost / duration_days&#10;success_criterion&#10;is_killer&#10;status" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="960" y="430" width="220" height="170" as="geometry" />
+        </mxCell>
+
+        <!-- ==== ПЕТЛЯ ОБУЧЕНИЯ ==== -->
+        <mxCell id="experiment_artifact" value="experiment_artifact&#10;──────────&#10;PK id&#10;FK roadmap_step_id&#10;FK hypothesis_id&#10;outcome (success/failure/partial)&#10;measured_value&#10;predicted_min/max&#10;note" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="430" width="230" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="rule_calibration" value="rule_calibration&#10;──────────&#10;PK id&#10;FK rule_id&#10;FK artifact_id&#10;coeff_before&#10;coeff_after" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="660" y="620" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="dead_end" value="dead_end  (БАЗА ТУПИКОВ)&#10;──────────&#10;PK id&#10;FK module_id&#10;target_cause&#10;FK size_class_id&#10;reason&#10;FK source_artifact_id" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="340" y="620" width="220" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- ==== СВЯЗИ ==== -->
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="loss_cell" target="plant"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="loss_cell" target="metal"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="loss_cell" target="size_class"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="loss_cell" target="mineral_form"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="equipment" target="plant"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="rule" target="module"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="rule" target="size_class"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="hypothesis" target="plant"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="hypothesis" target="module"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="evaluation" target="hypothesis"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="evaluation" target="rule"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="evaluation" target="metal"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="roadmap_step" target="hypothesis"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="experiment_artifact" target="roadmap_step"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="experiment_artifact" target="hypothesis"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="rule_calibration" target="rule"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="rule_calibration" target="experiment_artifact"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="dead_end" target="module"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell style="endArrow=open;endFill=0;html=1;" edge="1" parent="1" source="dead_end" target="experiment_artifact"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
