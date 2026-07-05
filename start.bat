@@ -16,17 +16,15 @@ echo [ok] Docker is running.
 REM --- 2) .env ---
 if not exist ".env" copy /Y ".env.example" ".env" >nul
 
-REM --- 3) Ollama check - warn only, needed for RAG tab ---
-curl -s http://localhost:11434/api/tags >nul 2>nul
-if errorlevel 1 goto ollama_warn
-echo [ok] Ollama is reachable.
+REM --- 3) Yandex keys check - warn only, needed for RAG tab ---
+findstr /R /C:"^YANDEX_API_KEY=." /C:"^YANDEX_FOLDER_ID=." ".env" >nul 2>nul
+if errorlevel 1 goto yandex_warn
+echo [ok] Yandex Cloud keys found in .env.
 goto up
-:ollama_warn
-echo [warn] Ollama not reachable on 11434 - the RAG tab will not work.
-echo        Install Ollama, then run:
-echo          ollama pull granite-embedding:278m
-echo          ollama pull qwen2.5:3b
-echo        The scoring engine works without Ollama.
+:yandex_warn
+echo [warn] YANDEX_API_KEY / YANDEX_FOLDER_ID not set in .env - the RAG tab (Literature)
+echo        and LLM cards will fall back. Add the keys to .env to enable them.
+echo        The scoring engine works without them.
 
 :up
 echo.

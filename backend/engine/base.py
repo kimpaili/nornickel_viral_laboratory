@@ -65,6 +65,10 @@ def evaluate_hypothesis(
     target_metal_id = _first_target_metal_id(session, hypothesis.plant_id, best.target_cells)
     dead_end_flag = _matches_dead_end(session, best_rule)
 
+    module_reports = _module_reports(session, pairs, best_rule.id)
+    provenance = dict(best.provenance)
+    provenance["module_reports"] = module_reports
+
     session.query(models.Evaluation).filter_by(hypothesis_id=hypothesis.id).delete()
     evaluation = models.Evaluation(
         hypothesis_id=hypothesis.id,
@@ -76,13 +80,77 @@ def evaluate_hypothesis(
         effect_usd_max=best.effect_usd[1],
         feasible=best.feasible,
         relevance_score=_relevance_score(best),
-        provenance=best.provenance,
+        provenance=provenance,
         dead_end_flag=dead_end_flag,
     )
     hypothesis.status = "evaluated"
     session.add(evaluation)
     session.flush()
     return evaluation
+
+
+def _module_reports(
+    session: Session,
+    pairs: list[tuple[models.Rule, ModuleVerdict]],
+    selected_rule_id: int,
+) -> list[dict]:
+    """Мини-отчёт по каждому модулю — «главная фича» этапа (прозрачность движка).
+
+    По каждому модулю берём лучшее из его правил (тот же критерий специфичности,
+    что и в общем выборе) и раскрываем его логику: на какие ячейки бил, какое
+    правило и коэффициент применил, какие числа фабрики взял и что на выходе.
+    Приоритет гипотезы виден как сумма вкладов модулей (`relevance_contribution`).
+    Один модуль помечается `selected` — именно он даёт итоговый эффект гипотезы.
+    """
+    best_per_module: dict[str, tuple[models.Rule, ModuleVerdict]] = {}
+    for rule, verdict in pairs:
+        code = rule.module.code
+        current = best_per_module.get(code)
+        if current is None or _rule_priority((rule, verdict)) > _rule_priority(current):
+            best_per_module[code] = (rule, verdict)
+
+    reports: list[dict] = []
+    for code, (rule, verdict) in best_per_module.items():
+        prov = verdict.provenance
+        score_breakdown = _score_breakdown(verdict)
+        reports.append(
+            {
+                "module_code": code,
+                "module_title": rule.module.title,
+                "selected": rule.id == selected_rule_id,
+                "rule_id": rule.id,
+                "rule_code": rule.code,
+                "target_cause": rule.target_cause,
+                "target_size_class": prov.get("target_size_class"),
+                "coeff": prov.get("coeff"),
+                "coeff_min": prov.get("coeff_min"),
+                "coeff_max": prov.get("coeff_max"),
+                "coeff_explanation": prov.get("coeff_explanation"),
+                "feasible": verdict.feasible,
+                "required_equipment": prov.get("required_equipment", []),
+                "plant_equipment": prov.get("plant_equipment", []),
+                "side_effect": verdict.side_effect,
+                "effect_tons_min": str(verdict.effect_tons[0]),
+                "effect_tons_max": str(verdict.effect_tons[1]),
+                "effect_usd_min": str(verdict.effect_usd[0]),
+                "effect_usd_max": str(verdict.effect_usd[1]),
+                "relevance_contribution": str(_relevance_score(verdict)),
+                "expected_effect_usd": str(score_breakdown["expected_effect_usd"]),
+                "success_probability": str(score_breakdown["success_probability"]),
+                "risk_penalty": str(score_breakdown["risk_penalty"]),
+                "score_breakdown": {key: str(value) for key, value in score_breakdown.items()},
+                "selection_reason": _selection_reason(rule, verdict, rule.id == selected_rule_id),
+                "money_formula": _money_formula(prov.get("target_cells", [])),
+                "target_cells": prov.get("target_cells", []),
+                "source": prov.get("source"),
+            }
+        )
+    # Выбранный модуль — первым, остальные по убыванию вклада.
+    reports.sort(
+        key=lambda item: (item["selected"], Decimal(item["relevance_contribution"])),
+        reverse=True,
+    )
+    return reports
 
 
 def _rules_for_hypothesis(
@@ -211,3 +279,38 @@ def _relevance_score(verdict: ModuleVerdict) -> Decimal:
     tons_score = min(verdict.effect_tons[1], Decimal("20"))
     feasibility_bonus = Decimal("10") if verdict.feasible else Decimal("0")
     return money_score + tons_score + feasibility_bonus
+
+
+def _score_breakdown(verdict: ModuleVerdict) -> dict[str, Decimal]:
+    expected_usd = (verdict.effect_usd[0] + verdict.effect_usd[1]) / Decimal("2")
+    spread = max(verdict.effect_usd[1] - verdict.effect_usd[0], Decimal("0"))
+    denom = max(verdict.effect_usd[1], Decimal("1"))
+    risk = min(spread / denom, Decimal("1"))
+    probability = max(Decimal("0.05"), min(Decimal("0.95"), Decimal("1") - risk / Decimal("2")))
+    return {
+        "expected_effect_usd": expected_usd.quantize(Decimal("0.01")),
+        "success_probability": probability.quantize(Decimal("0.0001")),
+        "risk_penalty": risk.quantize(Decimal("0.0001")),
+        "usd_component": min(verdict.effect_usd[1] / Decimal("100000"), Decimal("70")),
+        "tons_component": min(verdict.effect_tons[1], Decimal("20")),
+        "feasible_component": Decimal("10") if verdict.feasible else Decimal("0"),
+    }
+
+
+def _selection_reason(rule: models.Rule, verdict: ModuleVerdict, selected: bool) -> str:
+    specificity = "специфичное правило по классу" if rule.target_size_class_id else "общее правило"
+    hit = "попало в целевые ячейки" if verdict.effect_tons[1] > 0 else "не попало в ячейки матрицы"
+    feasible = "оборудование есть" if verdict.feasible else "нет нужного оборудования"
+    if selected:
+        return f"модуль выбран: {specificity}, {hit}, {feasible}, лучший вклад среди правил модуля"
+    return f"модуль рассмотрен, но не выбран итоговым: {specificity}, {hit}, {feasible}"
+
+
+def _money_formula(target_cells: list[dict]) -> str:
+    if not target_cells:
+        return "нет целевых ячеек, денежный эффект равен 0"
+    first = target_cells[0]
+    return (
+        "по каждой ячейке: потери, т × коэффициент кривой × цена металла; "
+        f"пример: {first.get('money_formula', 'тонны × coeff × цена')}"
+    )

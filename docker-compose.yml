@@ -5,14 +5,14 @@ x-app-env: &app-env
   OPENROUTER_MODEL: ${OPENROUTER_MODEL:-~openai/gpt-latest}
   OPENROUTER_APP_TITLE: ${OPENROUTER_APP_TITLE:-Factory of Hypotheses MVP}
   OPENROUTER_APP_URL: ${OPENROUTER_APP_URL:-http://localhost:8000}
-  # Ollama крутится на хосте — из контейнера доступен через host-gateway.
-  # Захардкожено (не ${...}): корневой .env содержит localhost для запуска на хосте,
-  # и compose иначе подставил бы его сюда, сломав доступ из контейнера.
-  OLLAMA_BASE_URL: "http://host.docker.internal:11434"
-  OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-granite-embedding:278m}
-  OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-qwen2.5:3b}
-  OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-180}
-  EMBED_DIM: ${EMBED_DIM:-768}
+  # RAG через Yandex Cloud Foundation Models (облако, не локальный контур).
+  YANDEX_API_KEY: ${YANDEX_API_KEY:-}
+  YANDEX_FOLDER_ID: ${YANDEX_FOLDER_ID:-}
+  YANDEX_CHAT_MODEL: ${YANDEX_CHAT_MODEL:-yandexgpt-lite}
+  YANDEX_EMBED_DOC_MODEL: ${YANDEX_EMBED_DOC_MODEL:-text-search-doc}
+  YANDEX_EMBED_QUERY_MODEL: ${YANDEX_EMBED_QUERY_MODEL:-text-search-query}
+  YANDEX_TIMEOUT: ${YANDEX_TIMEOUT:-60}
+  EMBED_DIM: ${EMBED_DIM:-256}
   CORPUS_PATH: /corpus
   RAG_TOP_K: ${RAG_TOP_K:-6}
 
@@ -59,10 +59,10 @@ services:
       - "--server.address=0.0.0.0"
       - "--server.port=8501"
       - "--theme.base=dark"
-      - "--theme.primaryColor=#2fce8f"
-      - "--theme.backgroundColor=#0f1419"
-      - "--theme.secondaryBackgroundColor=#1a2029"
-      - "--theme.textColor=#e8eef2"
+      - "--theme.primaryColor=#00FFBF"
+      - "--theme.backgroundColor=#0b0f17"
+      - "--theme.secondaryBackgroundColor=#151b28"
+      - "--theme.textColor=#eef2f5"
     volumes:
       - "./frontend:/app/frontend"
     ports:

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from .. import models
 from ..config import get_settings
-from . import loader, ollama_client
+from . import loader, yandex_client
 from .chunk import chunk_text
 
 _EMBED_BATCH = 32
@@ -105,7 +105,7 @@ def _index_file(
 
     for batch_start in range(0, len(pieces), _EMBED_BATCH):
         batch = pieces[batch_start : batch_start + _EMBED_BATCH]
-        vectors = ollama_client.embed([text for _, text in batch])
+        vectors = yandex_client.embed([text for _, text in batch], kind="doc")
         for offset, ((page, text), vector) in enumerate(zip(batch, vectors)):
             session.add(
                 models.CorpusChunk(

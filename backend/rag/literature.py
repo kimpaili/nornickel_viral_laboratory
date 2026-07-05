@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from .. import models
 from ..engine import rank
-from . import ollama_client, retriever
+from . import retriever, yandex_client
 
 _CAUSE_MODULE = {"free": "classification", "locked": "regrind", "dispersed": "fine_flotation"}
 _CAUSE_RU = {
@@ -61,7 +61,7 @@ def propose(session: Session, plant_id: int, max_cells: int = 3, k: int = 4) -> 
             for i, h in enumerate(hits, 1)
         )
         try:
-            rationale = ollama_client.chat(
+            rationale = yandex_client.chat(
                 [
                     {"role": "system", "content": _SYSTEM},
                     {"role": "user", "content":
@@ -70,8 +70,8 @@ def propose(session: Session, plant_id: int, max_cells: int = 3, k: int = 4) -> 
                         f"Фрагменты литературы:\n{context}\n\nПредложи гипотезу."},
                 ]
             )
-        except ollama_client.OllamaError as exc:
-            rationale = f"(Ollama недоступен: {exc})"
+        except yandex_client.YandexError as exc:
+            rationale = f"(Yandex LLM недоступен: {exc})"
 
         proposals.append({
             "cell_id": cell.id,

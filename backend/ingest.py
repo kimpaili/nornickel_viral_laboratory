@@ -31,7 +31,9 @@ def parse_loss_cells_from_xlsx(file: BinaryIO, filename: str) -> tuple[list[Pars
 
     warnings: list[str] = []
     parsed: list[ParsedLossCell] = []
-    workbook = pd.read_excel(file, sheet_name=None)
+    # dtype=str: не даём Excel/pandas превратить коды классов вроде «+125» в число 125
+    # (иначе ломается сопоставление размерного класса на реальных файлах жюри).
+    workbook = pd.read_excel(file, sheet_name=None, dtype=str)
 
     for sheet_name, frame in workbook.items():
         mapping = _resolve_columns(frame.columns)
@@ -49,7 +51,7 @@ def parse_loss_cells_from_xlsx(file: BinaryIO, filename: str) -> tuple[list[Pars
                 warnings.append(f"{filename}:{sheet_name}:{row_index + 2}: bad tons value")
                 continue
 
-            if tons <= 0:
+            if not tons.is_finite() or tons <= 0:
                 continue
 
             parsed.append(

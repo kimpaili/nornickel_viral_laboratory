@@ -1,0 +1,26 @@
+# Продакшн-оверлей для сервера: UI на порт 80 домена, API на 8000.
+# Запуск:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+services:
+  db:
+    restart: unless-stopped
+  api:
+    restart: unless-stopped
+  frontend:
+    restart: unless-stopped
+    ports:
+      - "80:8501"
+    command:
+      - "streamlit"
+      - "run"
+      - "frontend/app.py"
+      - "--server.address=0.0.0.0"
+      - "--server.port=8501"
+      - "--server.headless=true"
+      - "--server.enableCORS=false"
+      - "--server.enableXsrfProtection=false"
+      - "--browser.gatherUsageStats=false"
+      - "--theme.base=dark"
+      - "--theme.primaryColor=#00FFBF"
+      - "--theme.backgroundColor=#0b0f17"
+      - "--theme.secondaryBackgroundColor=#151b28"
+      - "--theme.textColor=#eef2f5"

@@ -8,28 +8,20 @@ from __future__ import annotations
 import argparse
 import sys
 
-from ..config import get_settings
 from ..db import SessionLocal, init_db
-from . import ollama_client
+from . import yandex_client
 from .indexer import index_corpus
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Index corpus into pgvector via Ollama")
+    parser = argparse.ArgumentParser(description="Index corpus into pgvector via Yandex Cloud")
     parser.add_argument("path", nargs="?", default=None, help="Путь к папке корпуса")
     parser.add_argument("--reindex", action="store_true", help="Переиндексировать всё")
     args = parser.parse_args(argv)
 
-    health = ollama_client.health()
+    health = yandex_client.health()
     if not health.get("reachable"):
-        print(f"[!] Ollama недоступен: {health.get('error')}", file=sys.stderr)
-        return 2
-    if not health.get("embed_model_present"):
-        print(
-            f"[!] Модель эмбеддингов {get_settings().ollama_embed_model} не найдена в Ollama. "
-            f"Скачай: ollama pull {get_settings().ollama_embed_model}",
-            file=sys.stderr,
-        )
+        print(f"[!] Yandex недоступен: {health.get('error')}", file=sys.stderr)
         return 2
 
     init_db()

@@ -6,7 +6,7 @@ from typing import Any
 from openai import OpenAI
 
 from .config import get_settings
-from .rag import ollama_client
+from .rag import yandex_client
 
 
 SYSTEM_CARD_PROMPT = (
@@ -24,13 +24,13 @@ SYSTEM_CARD_PROMPT = (
 
 
 # ---------------------------------------------------------------------------
-# Карточка гипотезы — генерация через ЛОКАЛЬНЫЙ Ollama (без внешних кредитов).
+# Карточка гипотезы — генерация через YandexGPT (Yandex Cloud Foundation Models).
 # Числа берутся из движка; LLM только оборачивает их в текст.
 # ---------------------------------------------------------------------------
 def build_hypothesis_card(context: dict[str, Any]) -> tuple[str, bool]:
     facts = _facts_block(context)
     try:
-        text = ollama_client.chat(
+        text = yandex_client.chat(
             [
                 {"role": "system", "content": SYSTEM_CARD_PROMPT},
                 {"role": "user", "content": facts},
@@ -38,9 +38,9 @@ def build_hypothesis_card(context: dict[str, Any]) -> tuple[str, bool]:
             temperature=0.2,
         )
         if not text.strip():
-            raise ollama_client.OllamaError("пустой ответ модели")
+            raise yandex_client.YandexError("пустой ответ модели")
         return text.strip(), True
-    except ollama_client.OllamaError:
+    except yandex_client.YandexError:
         return _fallback_card(context), False
 
 
@@ -92,7 +92,7 @@ def _fallback_card(context: dict[str, Any]) -> str:
         f"коэффициент {d['coeff_min']}–{d['coeff_max']}. Целевые ячейки:\n{cells}\n\n"
         f"**Первый эксперимент:** {d['killer_step'] or 'самый дешёвый этап дорожной карты'} — "
         f"сверить факт с диапазоном движка.\n\n"
-        f"_(Текст собран без LLM: Ollama недоступен. Все числа — из движка.)_"
+        f"_(Текст собран без LLM: Yandex недоступен. Все числа — из движка.)_"
     )
 
 

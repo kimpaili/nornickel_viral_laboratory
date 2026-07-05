@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from .. import models
 from ..config import get_settings
-from . import ollama_client
+from . import yandex_client
 
 _SYSTEM_PROMPT = (
     "Ты — помощник по обогащению руд. Отвечай СТРОГО по предоставленным фрагментам "
@@ -53,7 +53,7 @@ def search(
     plant_hint: str | None = None,
 ) -> list[Hit]:
     top_k = k or get_settings().rag_top_k
-    query_vector = ollama_client.embed_one(query)
+    query_vector = yandex_client.embed_one(query, kind="query")
     distance = models.CorpusChunk.embedding.cosine_distance(query_vector)
 
     stmt = session.query(models.CorpusChunk, distance.label("distance"))
@@ -91,7 +91,7 @@ def answer(
 
     context = "\n\n".join(_format_hit(index, hit) for index, hit in enumerate(hits, 1))
     try:
-        text = ollama_client.chat(
+        text = yandex_client.chat(
             [
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {
@@ -101,7 +101,7 @@ def answer(
             ]
         )
         used_llm = True
-    except ollama_client.OllamaError as exc:
+    except yandex_client.YandexError as exc:
         text = _fallback(hits, str(exc))
         used_llm = False
 
@@ -118,7 +118,7 @@ def _format_hit(index: int, hit: Hit) -> str:
 
 
 def _fallback(hits: list[Hit], reason: str) -> str:
-    lines = ["Ollama недоступен — выдаю найденные фрагменты без генерации:", ""]
+    lines = ["Yandex LLM недоступен — выдаю найденные фрагменты без генерации:", ""]
     for index, hit in enumerate(hits, 1):
         where = hit.source_file + (f", стр. {hit.page}" if hit.page else "")
         lines.append(f"[{index}] {where}: {hit.content[:200]}…")

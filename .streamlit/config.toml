@@ -1,0 +1,8 @@
+# Фирменная гамма из презентации (преза.pptx): зелёный #00FFBF + фиолетовый #5302E0.
+# Тёмная база — на ней логотип-монограмма и акценты читаются контрастно.
+[theme]
+base = "dark"
+primaryColor = "#00FFBF"
+backgroundColor = "#0b0f17"
+secondaryBackgroundColor = "#151b28"
+textColor = "#eef2f5"
