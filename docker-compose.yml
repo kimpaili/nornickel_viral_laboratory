@@ -1,5 +1,5 @@
 x-app-env: &app-env
-  DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/factory_hypotheses
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-factory_hypotheses}
   OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
   OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
   OPENROUTER_MODEL: ${OPENROUTER_MODEL:-~openai/gpt-latest}
@@ -20,15 +20,17 @@ services:
   db:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_DB: factory_hypotheses
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-factory_hypotheses}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    # Порт открыт только на loopback: снаружи сервера БД недоступна,
+    # но локальная разработка по localhost:5433 работает как раньше.
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d factory_hypotheses"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-factory_hypotheses}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -44,6 +46,12 @@ services:
     command: ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
       db:
         condition: service_healthy
@@ -65,10 +73,13 @@ services:
       - "--theme.textColor=#eef2f5"
     volumes:
       - "./frontend:/app/frontend"
+    # Только loopback: прод-оверлей публикует UI на 0.0.0.0:${APP_PORT}.
+    # Для локальной разработки localhost:8501 работает как раньше.
     ports:
-      - "8501:8501"
+      - "127.0.0.1:8501:8501"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
   seed:
     build: .

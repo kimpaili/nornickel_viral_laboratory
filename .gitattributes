@@ -1,0 +1,5 @@
+# Shell-скрипты всегда с LF, иначе на Linux ломается shebang (bad interpreter).
+*.sh text eol=lf
+# Windows-скрипты — с CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
